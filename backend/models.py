@@ -108,6 +108,6 @@ class TravellingStats(models.Model):
 class Achievement(models.Model):
     id = models.PositiveIntegerField(primary_key=True)
     name = models.CharField(max_length=255)
-    description = models.TextField()
-    how_to = models.TextField()
-    score = models.PositiveIntegerField()
+    description = models.TextField(max_length=1024)
+    how_to = models.TextField(max_length=1024)
+    score = models.PositiveIntegerField(default=0)
