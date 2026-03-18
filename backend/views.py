@@ -212,7 +212,7 @@ class MyScoreView(APIView):
         except (Player.DoesNotExist, LeaderboardEntry.DoesNotExist):
             return Response({"error": "Not found"}, status=404)
 
-        start_rank = max(entry.rank - count, 1)
+        start_rank = 1
         end_rank = entry.rank + count
 
         entries = LeaderboardEntry.objects.filter(

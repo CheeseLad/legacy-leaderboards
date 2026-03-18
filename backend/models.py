@@ -1,6 +1,9 @@
 from django.db import models
+from django.core.validators import MaxValueValidator
 
 ### Types & Filters
+
+MAX_ITEM_COUNT = 99999 # Can be seen as max value for Xbox One here: https://www.youtube.com/watch?v=fEIor4h1Jqw
 
 class StatsType(models.IntegerChoices):
     TRAVELLING = 0, "Travelling"
@@ -74,13 +77,13 @@ class KillsStats(models.Model):
 class MiningStats(models.Model):
     entry = models.OneToOneField(LeaderboardEntry, on_delete=models.CASCADE, related_name="mining")
 
-    dirt = models.PositiveIntegerField(default=0)
-    stone = models.PositiveIntegerField(default=0)
-    sand = models.PositiveIntegerField(default=0)
-    cobblestone = models.PositiveIntegerField(default=0)
-    gravel = models.PositiveIntegerField(default=0)
-    clay = models.PositiveIntegerField(default=0)
-    obsidian = models.PositiveIntegerField(default=0)
+    dirt = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(MAX_ITEM_COUNT)])
+    stone = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(MAX_ITEM_COUNT)])
+    sand = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(MAX_ITEM_COUNT)])
+    cobblestone = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(MAX_ITEM_COUNT)])
+    gravel = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(MAX_ITEM_COUNT)])
+    clay = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(MAX_ITEM_COUNT)])
+    obsidian = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(MAX_ITEM_COUNT)])
 
 
 class FarmingStats(models.Model):
