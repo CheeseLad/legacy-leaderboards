@@ -11,6 +11,7 @@ from backend.models import (
     FarmingStats,
     TravellingStats,
     StatsType,
+    DifficultyType,
 )
 
 
@@ -26,14 +27,15 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Generating {num_players} players...")
 
-        # Create leaderboards (one per type)
-        leaderboards = {}
+        # Create leaderboards (one per type and difficulty)
+        leaderboards = []
         for stats_type in StatsType:
-            lb, _ = Leaderboard.objects.get_or_create(
-                stats_type=stats_type,
-                difficulty=1
-            )
-            leaderboards[stats_type] = lb
+            for difficulty in DifficultyType:
+                lb, _ = Leaderboard.objects.get_or_create(
+                    stats_type=stats_type,
+                    difficulty=difficulty,
+                )
+                leaderboards.append((stats_type, difficulty, lb))
 
         players = []
 
@@ -49,7 +51,7 @@ class Command(BaseCommand):
 
         # Create entries + stats
         for player in players:
-            for stats_type, lb in leaderboards.items():
+            for stats_type, _, lb in leaderboards:
 
                 score = random.randint(0, 1000)
 
@@ -107,7 +109,7 @@ class Command(BaseCommand):
         self.stdout.write("Calculating ranks...")
 
         # Recalculate ranks per leaderboard
-        for lb in leaderboards.values():
+        for _, _, lb in leaderboards:
             entries = LeaderboardEntry.objects.filter(
                 leaderboard=lb
             ).order_by("-total_score")
