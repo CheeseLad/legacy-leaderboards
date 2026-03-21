@@ -21,56 +21,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 
-def _env_bool(name: str, default: bool = False) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
-def _env_list(name: str, default: list[str] | None = None) -> list[str]:
-    value = os.getenv(name)
-    if not value:
-        return default[:] if default else []
-    return [item.strip() for item in value.split(",") if item.strip()]
-
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
-
-if not SECRET_KEY:
-    raise ImproperlyConfigured("SECRET_KEY must be set in the environment.")
-
-# For key rotation, set SECRET_KEY to the new key and keep prior keys in
-# SECRET_KEY_FALLBACKS (comma-separated) until old sessions are retired.
-SECRET_KEY_FALLBACKS = _env_list("SECRET_KEY_FALLBACKS", default=[])
-
-# SECURITY WARNING: don't run with debug turned on in production!
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development").strip().lower()
-IS_PRODUCTION = ENVIRONMENT in {"production", "prod"}
-
-DEBUG = _env_bool("DEBUG", default=not IS_PRODUCTION)
-if IS_PRODUCTION:
-    DEBUG = False
-
-ALLOWED_HOSTS = _env_list(
-    "ALLOWED_HOSTS",
-    default=["localhost", "127.0.0.1"] if not IS_PRODUCTION else [],
-)
-
-if IS_PRODUCTION:
-    if not ALLOWED_HOSTS:
-        raise ImproperlyConfigured(
-            "ALLOWED_HOSTS must be set to your public domains in production."
-        )
-    if "*" in ALLOWED_HOSTS:
-        raise ImproperlyConfigured(
-            "ALLOWED_HOSTS cannot contain '*' in production."
-        )
-
+DEBUG = os.getenv("DEBUG", "True").strip().lower() == "true"
+ALLOWED_HOSTS_ENV = os.getenv("ALLOWED_HOSTS").split(",")
 
 # Application definition
 
@@ -90,7 +47,6 @@ MIDDLEWARE = [
     "backend.middleware.SecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "backend.middleware.PostRequestLoggingMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -174,6 +130,8 @@ STORAGES = {
     },
 }
 
+IS_PRODUCTION = not DEBUG
+
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = IS_PRODUCTION
 SESSION_COOKIE_SECURE = IS_PRODUCTION
@@ -201,31 +159,6 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ]
-}
-
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {
-        "console": {"class": "logging.StreamHandler"},
-        "file": {
-            "class": "logging.FileHandler",
-            "filename": "general.log",
-            "formatter": "verbose",
-        },
-    },
-    "loggers": {
-        "": {
-            "handlers": ["console", "file"],
-            "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO"),
-        }
-    },
-    "formatters": {
-        "verbose": {
-            "format": "{asctime} ({levelname})- {name}- {message}",
-            "style": "{",
-        }
-    },
 }
 
 # Define the base URL for serving media files

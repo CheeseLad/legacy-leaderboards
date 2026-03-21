@@ -1,0 +1,122 @@
+[
+    {
+        "id": 0,
+        "name": "Taking Inventory",
+        "description": "Open your inventory.",
+        "score": 10
+    },
+    {
+        "id": 1,
+        "name": "Getting Wood",
+        "description": "Punch a tree until the block of wood pops out.",
+        "score": 10
+    },
+    {
+        "id": 2,
+        "name": "Benchmarking",
+        "description": "Craft a workbench with four blocks of wooden planks.",
+        "score": 10
+    },
+    {
+        "id": 3,
+        "name": "Time to Mine!",
+        "description": "Use planks and sticks to make a pickaxe.",
+        "score": 10
+    },
+    {
+        "id": 4,
+        "name": "Hot Topic",
+        "description": "Construct a furnace out of eight cobblestone blocks.",
+        "score": 15
+    },
+    {
+        "id": 5,
+        "name": "Acquire Hardware",
+        "description": "Smelt an iron ingot.",
+        "score": 15
+    },
+    {
+        "id": 6,
+        "name": "Time to Farm!",
+        "description": "Use planks and sticks to make a hoe.",
+        "score": 10
+    },
+    {
+        "id": 7,
+        "name": "Bake Bread",
+        "description": "Turn wheat into bread.",
+        "score": 20
+    },
+    {
+        "id": 8,
+        "name": "The Lie",
+        "description": "Bake a cake using wheat, sugar, milk and eggs!",
+        "score": 40
+    },
+    {
+        "id": 9,
+        "name": "Getting an Upgrade",
+        "description": "Construct a better pickaxe.",
+        "score": 15
+    },
+    {
+        "id": 10,
+        "name": "Delicious Fish",
+        "description": "Catch and cook a fish!",
+        "score": 15
+    },
+    {
+        "id": 11,
+        "name": "On A Rail",
+        "description": "Travel by minecart to a point at least 500m in a single direction from where you started.",
+        "score": 40
+    },
+    {
+        "id": 12,
+        "name": "Time to Strike!",
+        "description": "Use planks and sticks to make a sword.",
+        "score": 10
+    },
+    {
+        "id": 13,
+        "name": "Monster Hunter",
+        "description": "Attack and destroy a monster.",
+        "score": 20
+    },
+    {
+        "id": 14,
+        "name": "Cow Tipper",
+        "description": "Harvest some leather.",
+        "score": 15
+    },
+    {
+        "id": 15,
+        "name": "When Pigs Fly",
+        "description": "Use a saddle to ride a pig, then have the pig get hurt from fall damage while riding it.",
+        "score": 40
+    },
+    {
+        "id": 16,
+        "name": "Leader Of The Pack",
+        "description": "Befriend five wolves.",
+        "score": 30
+    },
+    {
+        "id": 17,
+        "name": "MOAR Tools",
+        "description": "Construct one type of each tool (one pickaxe, one spade, one axe and one hoe).",
+        "score": 15
+    },
+    {
+        "id": 18,
+        "name": "Dispense With This",
+        "description": "Construct a Dispenser.",
+        "score": 20
+    },
+    {
+        "id": 19,
+        "name": "Into The Nether",
+        "description": "Construct a Nether Portal.",
+        "score": 40
+    }
+]

@@ -1,5 +1,4 @@
-import copy
-import xml.etree.ElementTree as ET
+import json
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
@@ -8,88 +7,51 @@ from django.db import transaction
 from backend.models import Achievement
 
 
-XLAST_NS = "http://www.xboxlive.com/xlast"
-NS = {"x": XLAST_NS}
+def _parse_achievement(item: object, index: int) -> dict[str, object]:
+    if not isinstance(item, dict):
+        raise CommandError(f"Item at index {index} must be an object.")
 
+    required_fields = ["id", "name", "description", "score"]
+    missing_fields = [field for field in required_fields if field not in item]
+    if missing_fields:
+        missing = ", ".join(missing_fields)
+        raise CommandError(f"Item at index {index} is missing required fields: {missing}")
 
-def qname(tag: str) -> str:
-    return f"{{{XLAST_NS}}}{tag}"
+    try:
+        achievement_id = int(item["id"])
+    except (TypeError, ValueError) as exc:
+        raise CommandError(f"Invalid id at index {index}: {item['id']!r}") from exc
 
+    try:
+        score = int(item["score"])
+    except (TypeError, ValueError) as exc:
+        raise CommandError(f"Invalid score at index {index}: {item['score']!r}") from exc
 
-def get_translation(localized_string: ET.Element, locale: str) -> str:
-    for translation in localized_string.findall("x:Translation", NS):
-        if translation.get("locale") == locale:
-            return (translation.text or "").strip()
-    return ""
+    name = str(item["name"]).strip()
+    description = str(item["description"]).strip()
 
+    if not name:
+        raise CommandError(f"Name cannot be blank at index {index}.")
+    if not description:
+        raise CommandError(f"Description cannot be blank at index {index}.")
 
-def build_localized_lookup(root: ET.Element, locale: str) -> dict[int, str]:
-    lookup: dict[int, str] = {}
-    for localized in root.findall(".//x:LocalizedString", NS):
-        friendly_name = localized.get("friendlyName", "")
-        if not friendly_name.startswith("ACH_"):
-            continue
-
-        string_id_raw = localized.get("id")
-        if not string_id_raw:
-            continue
-
-        try:
-            string_id = int(string_id_raw)
-        except ValueError:
-            continue
-
-        lookup[string_id] = get_translation(localized, locale)
-
-    return lookup
-
-
-def build_filtered_localizedstrings(root: ET.Element, locale: str) -> ET.Element:
-    localized_strings = root.find(".//x:LocalizedStrings", NS)
-    if localized_strings is None:
-        raise CommandError("Could not find <LocalizedStrings> in the gameconfig file.")
-
-    filtered = copy.deepcopy(localized_strings)
-
-    for supported in list(filtered.findall("x:SupportedLocale", NS)):
-        if supported.get("locale") != locale:
-            filtered.remove(supported)
-
-    for localized in list(filtered.findall("x:LocalizedString", NS)):
-        friendly_name = localized.get("friendlyName", "")
-        if not friendly_name.startswith("ACH_"):
-            filtered.remove(localized)
-            continue
-
-        for translation in list(localized.findall("x:Translation", NS)):
-            if translation.get("locale") != locale:
-                localized.remove(translation)
-
-    return filtered
+    return {
+        "id": achievement_id,
+        "name": name,
+        "description": description,
+        "score": score,
+    }
 
 
 class Command(BaseCommand):
-    help = "Import achievements from a .gameconfig XML file into backend.Achievement"
+    help = "Import achievements from a JSON file into backend.Achievement"
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "gameconfig",
+            "input_file",
             nargs="?",
-            default="Minecraft.gameconfig",
-            help="Path to input .gameconfig file",
-        )
-        parser.add_argument(
-            "--locale",
-            default="en-US",
-            help="Locale to import from LocalizedStrings (default: en-US)",
-        )
-        parser.add_argument(
-            "--filtered-output",
-            default="",
-            help=(
-                "Optional output path for filtered LocalizedStrings XML containing "
-                "only ACH_* and the selected locale"
-            ),
+            default="./data/achievements.json",
+            help="Path to input achievements JSON file",
         )
         parser.add_argument(
             "--clear-missing",
@@ -104,9 +66,7 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        file_path = Path(options["gameconfig"])
-        locale = options["locale"]
-        filtered_output = options["filtered_output"]
+        file_path = Path(options["input_file"])
         clear_missing = options["clear_missing"]
         dry_run = options["dry_run"]
 
@@ -114,42 +74,39 @@ class Command(BaseCommand):
             raise CommandError(f"Input file does not exist: {file_path}")
 
         try:
-            tree = ET.parse(file_path)
-            root = tree.getroot()
-        except ET.ParseError as exc:
-            raise CommandError(f"Failed to parse XML: {exc}") from exc
+            raw_data = json.loads(file_path.read_text(encoding="utf-8"))
+        except UnicodeDecodeError as exc:
+            raise CommandError(f"Failed to decode JSON as UTF-8: {exc}") from exc
+        except json.JSONDecodeError as exc:
+            raise CommandError(f"Failed to parse JSON: {exc}") from exc
 
-        localized_lookup = build_localized_lookup(root, locale)
-        achievement_nodes = root.findall(".//x:Achievements/x:Achievement", NS)
+        if not isinstance(raw_data, list):
+            raise CommandError("Input JSON must be an array of achievement objects.")
 
-        if not achievement_nodes:
-            raise CommandError("No <Achievement> nodes found in the gameconfig file.")
+        achievements = [_parse_achievement(item, index) for index, item in enumerate(raw_data)]
 
         imported_ids: set[int] = set()
         created_count = 0
         updated_count = 0
-        skipped_count = 0
+        duplicate_count = 0
 
-        for node in achievement_nodes:
-            achievement_id_raw = node.get("id")
-            if not achievement_id_raw:
-                skipped_count += 1
+        seen_ids: set[int] = set()
+        for achievement in achievements:
+            achievement_id = achievement["id"]
+            if achievement_id in seen_ids:
+                duplicate_count += 1
                 continue
+            seen_ids.add(achievement_id)
 
-            try:
-                achievement_id = int(achievement_id_raw) - 1  # convert from 1-based to 0-based ID
-            except ValueError:
-                skipped_count += 1
+        for achievement in achievements:
+            achievement_id = achievement["id"]
+            if achievement_id in imported_ids:
                 continue
-
-            title_id = int(node.get("titleStringId", "0"))
-            description_id = int(node.get("descriptionStringId", "0"))
-            score = int(node.get("cred", "0"))
 
             defaults = {
-                "name": localized_lookup.get(title_id, ""),
-                "description": localized_lookup.get(description_id, ""),
-                "score": score,
+                "name": achievement["name"],
+                "description": achievement["description"],
+                "score": achievement["score"],
             }
 
             imported_ids.add(achievement_id)
@@ -177,17 +134,6 @@ class Command(BaseCommand):
             if not dry_run:
                 qs.delete()
 
-        if filtered_output:
-            filtered_root = build_filtered_localizedstrings(root, locale)
-            output_path = Path(filtered_output)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            ET.register_namespace("", XLAST_NS)
-            filtered_tree = ET.ElementTree(filtered_root)
-            if hasattr(ET, "indent"):
-                ET.indent(filtered_tree, space="  ")
-            filtered_tree.write(output_path, encoding="utf-16", xml_declaration=True)
-            self.stdout.write(f"Filtered XML written to: {output_path}")
-
         if dry_run:
             transaction.set_rollback(True)
 
@@ -195,6 +141,6 @@ class Command(BaseCommand):
             self.style.SUCCESS(
                 "Achievement import complete "
                 f"(created={created_count}, updated={updated_count}, "
-                f"skipped={skipped_count}, deleted={deleted_count}, dry_run={dry_run})."
+                f"duplicates={duplicate_count}, deleted={deleted_count}, dry_run={dry_run})."
             )
         )
