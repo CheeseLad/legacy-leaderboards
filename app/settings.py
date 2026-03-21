@@ -13,11 +13,26 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(os.path.join(BASE_DIR, '.env'))
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_list(name: str, default: list[str] | None = None) -> list[str]:
+    value = os.getenv(name)
+    if not value:
+        return default[:] if default else []
+    return [item.strip() for item in value.split(",") if item.strip()]
 
 
 # Quick-start development settings - unsuitable for production
@@ -26,10 +41,35 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG") == "True"
+if not SECRET_KEY:
+    raise ImproperlyConfigured("SECRET_KEY must be set in the environment.")
 
-ALLOWED_HOSTS = ["*"]
+# For key rotation, set SECRET_KEY to the new key and keep prior keys in
+# SECRET_KEY_FALLBACKS (comma-separated) until old sessions are retired.
+SECRET_KEY_FALLBACKS = _env_list("SECRET_KEY_FALLBACKS", default=[])
+
+# SECURITY WARNING: don't run with debug turned on in production!
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").strip().lower()
+IS_PRODUCTION = ENVIRONMENT in {"production", "prod"}
+
+DEBUG = _env_bool("DEBUG", default=not IS_PRODUCTION)
+if IS_PRODUCTION:
+    DEBUG = False
+
+ALLOWED_HOSTS = _env_list(
+    "ALLOWED_HOSTS",
+    default=["localhost", "127.0.0.1"] if not IS_PRODUCTION else [],
+)
+
+if IS_PRODUCTION:
+    if not ALLOWED_HOSTS:
+        raise ImproperlyConfigured(
+            "ALLOWED_HOSTS must be set to your public domains in production."
+        )
+    if "*" in ALLOWED_HOSTS:
+        raise ImproperlyConfigured(
+            "ALLOWED_HOSTS cannot contain '*' in production."
+        )
 
 
 # Application definition
@@ -47,6 +87,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "backend.middleware.SecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "backend.middleware.PostRequestLoggingMiddleware",
@@ -131,6 +172,27 @@ STORAGES = {
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
+}
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_SSL_REDIRECT = IS_PRODUCTION
+SESSION_COOKIE_SECURE = IS_PRODUCTION
+CSRF_COOKIE_SECURE = IS_PRODUCTION
+SECURE_HSTS_SECONDS = 31536000 if IS_PRODUCTION else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = IS_PRODUCTION
+SECURE_HSTS_PRELOAD = IS_PRODUCTION
+X_FRAME_OPTIONS = "DENY"
+
+CONTENT_SECURITY_POLICY = {
+    "default-src": "'self'",
+    "script-src": "'self'",
+    "style-src": "'self' 'unsafe-inline'",
+    "img-src": "'self' data:",
+    "font-src": "'self' data:",
+    "connect-src": "'self'",
+    "frame-ancestors": "'none'",
+    "base-uri": "'self'",
+    "form-action": "'self'",
 }
 
 REST_FRAMEWORK = {
