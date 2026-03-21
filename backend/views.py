@@ -1,12 +1,22 @@
-from django.db.models import F
+from pathlib import Path
+
+from django.conf import settings
+from django.db.models import F, Sum
+from django.shortcuts import render
 from django.urls import URLPattern, URLResolver, get_resolver
+from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import Player, Leaderboard, LeaderboardEntry, StatsType, DifficultyType
+from .models import Achievement, Player, PlayerAchievement, Leaderboard, LeaderboardEntry, StatsType, DifficultyType
 from .serializers import (
+    AddAchievementToPlayerSerializer,
+    AchievementSerializer,
+    CreatePlayerSerializer,
     LeaderboardEntrySerializer,
+    PlayerDetailsSerializer,
+    PlayerSerializer,
     RegisterScoreSerializer,
 )
 
@@ -67,6 +77,67 @@ class ApiRootView(APIView):
                 "endpoints": endpoints,
             }
         )
+
+
+class AchievementsUIView(APIView):
+    def _build_icon_map(self):
+        icon_map = {}
+        icons_dir = Path(settings.MEDIA_ROOT) / "achievements"
+        if not icons_dir.exists():
+            return icon_map
+
+        for icon_file in sorted(icons_dir.glob("MCTrophy_*.png")):
+            try:
+                achievement_id = int(icon_file.stem.split("_")[-1])
+            except ValueError:
+                continue
+            icon_map[achievement_id] = f"{settings.MEDIA_URL}achievements/{icon_file.name}"
+
+        return icon_map
+
+    def get(self, request):
+        uid = request.query_params.get("uid")
+        if not uid:
+            return Response({"error": "Missing required query param: uid"}, status=400)
+
+        try:
+            player = Player.objects.get(uid=uid)
+        except Player.DoesNotExist:
+            return Response({"error": "Player not found"}, status=404)
+
+        icon_map = self._build_icon_map()
+        unlocked_ids = set(
+            PlayerAchievement.objects.filter(player=player, status=True)
+            .values_list("achievement_id", flat=True)
+        )
+
+        current_score = PlayerAchievement.objects.filter(player=player, status=True).aggregate(score=Sum("achievement__score"))["score"] or 0
+        total_score = Achievement.objects.aggregate(total_score=Sum("score"))["total_score"] or 0
+
+        cards = []
+        for achievement_id, icon_url in sorted(icon_map.items()):
+            achievement = Achievement.objects.filter(id=achievement_id).first()
+            cards.append(
+                {
+                    "id": achievement_id,
+                    "name": achievement.name if achievement else f"Achievement {achievement_id}",
+                    "description": achievement.description if achievement else "No description available.",
+                    "score": achievement.score if achievement else 0,
+                    "icon_url": icon_url,
+                    "is_unlocked": achievement_id in unlocked_ids,
+                }
+            )
+
+        context = {
+            "name": player.name,
+            "uid": uid,
+            "cards": cards,
+            "unlocked_count": sum(1 for card in cards if card["is_unlocked"]),
+            "total_count": len(cards),
+            "current_score": current_score,
+            "total_score": total_score,
+        }
+        return render(request, "backend/achievements_ui.html", context)
 
 DIFFICULTY_MAP = {
     "peaceful": DifficultyType.PEACEFUL,
@@ -238,3 +309,118 @@ class LeaderboardView(APIView):
             return TopRankView().get(request)
 
         return Response({"error": "Invalid mode"}, status=400)
+
+
+class CreatePlayerView(generics.GenericAPIView):
+    serializer_class = CreatePlayerSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        player = serializer.save()
+        return Response(PlayerSerializer(player).data, status=status.HTTP_201_CREATED)
+
+
+class PlayerDetailsView(APIView):
+    def get(self, request):
+        uid = request.query_params.get("uid")
+        if not uid:
+            return Response({"error": "Missing required query param: uid"}, status=400)
+
+        try:
+            player = Player.objects.prefetch_related(
+                "leaderboardentry_set__leaderboard",
+                "playerachievement_set__achievement",
+            ).get(uid=uid)
+        except Player.DoesNotExist:
+            return Response({"error": "Player not found"}, status=404)
+
+        return Response(PlayerDetailsSerializer(player).data)
+
+
+class AddAchievementToPlayerView(generics.GenericAPIView):
+    serializer_class = AddAchievementToPlayerSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        achievement_id = serializer.validated_data["achievement_id"]
+        player_uid = serializer.validated_data["player_uid"]
+
+        try:
+            player = Player.objects.get(uid=player_uid)
+        except Player.DoesNotExist:
+            return Response({"error": "Player not found"}, status=404)
+
+        try:
+            achievement = Achievement.objects.get(id=achievement_id)
+        except Achievement.DoesNotExist:
+            return Response({"error": "Achievement not found"}, status=404)
+
+        player_achievement, _ = PlayerAchievement.objects.get_or_create(
+            player=player,
+            achievement=achievement,
+            defaults={"status": False},
+        )
+
+        if not player_achievement.status:
+            player_achievement.status = True
+            player_achievement.save(update_fields=["status"])
+
+        return Response(
+            {
+                "player_uid": player.uid,
+                "achievement_id": achievement.id,
+                "status": player_achievement.status,
+            }
+        )
+
+
+class RemoveAchievementFromPlayerView(generics.GenericAPIView):
+    serializer_class = AddAchievementToPlayerSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        achievement_id = serializer.validated_data["achievement_id"]
+        player_uid = serializer.validated_data["player_uid"]
+
+        try:
+            player = Player.objects.get(uid=player_uid)
+        except Player.DoesNotExist:
+            return Response({"error": "Player not found"}, status=404)
+
+        try:
+            achievement = Achievement.objects.get(id=achievement_id)
+        except Achievement.DoesNotExist:
+            return Response({"error": "Achievement not found"}, status=404)
+
+        player_achievement, _ = PlayerAchievement.objects.get_or_create(
+            player=player,
+            achievement=achievement,
+            defaults={"status": False},
+        )
+
+        if player_achievement.status:
+            player_achievement.status = False
+            player_achievement.save(update_fields=["status"])
+
+        return Response(
+            {
+                "player_uid": player.uid,
+                "achievement_id": achievement.id,
+                "status": player_achievement.status,
+            }
+        )
+
+
+class AchievementListView(APIView):
+    def get(self, request):
+        achievements = Achievement.objects.all().order_by("id")
+        serializer = AchievementSerializer(achievements, many=True)
+        return Response(serializer.data)

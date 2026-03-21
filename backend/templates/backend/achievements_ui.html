@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Achievements UI</title>
+  <style>
+    :root {
+      --bg: #c6d2df;
+      --panel: #dfe7f0;
+      --panel-border: #8ea0b6;
+      --slot-bg: #eaf1f8;
+      --slot-border: #8ca0b4;
+      --slot-highlight: #f8fbff;
+      --text-main: #3f4f63;
+      --text-sub: #6e7f94;
+      --locked-overlay: rgba(210, 220, 231, 0.65);
+      --selected: #f2cc4b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Trebuchet MS", "Verdana", sans-serif;
+      background:
+        radial-gradient(circle at 12% 25%, rgba(255, 255, 255, 0.45), transparent 42%),
+        linear-gradient(180deg, #bcc9d8 0%, #8ea1b6 100%);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .screen {
+      width: min(1120px, 100%);
+      border: 3px solid #9cadbf;
+      background: var(--panel);
+      box-shadow:
+        inset 0 0 0 2px #f7fbff,
+        0 10px 28px rgba(34, 48, 67, 0.25);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .title {
+      text-align: center;
+      padding: 14px 20px;
+      font-size: 34px;
+      letter-spacing: 0.8px;
+      color: #6e7f93;
+      border-bottom: 2px solid #a7b7c9;
+      background: linear-gradient(180deg, #edf4fb 0%, #d6e1ed 100%);
+      text-shadow: 0 1px 0 #f7fbff;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 24px;
+      color: #95a4b6;
+      padding: 10px 12px 6px;
+      text-shadow: 0 1px 0 #f7fbff;
+    }
+
+    .meta {
+      text-align: center;
+      font-size: 16px;
+      color: var(--text-sub);
+      margin-bottom: 16px;
+      padding: 0 12px;
+    }
+
+    .grid-wrap {
+      padding: 0 16px 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+      gap: 10px;
+      border: 2px solid #9eafc2;
+      background: #cad7e5;
+      padding: 12px;
+      border-radius: 8px;
+      max-height: 70vh;
+      overflow: auto;
+    }
+
+    .card {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      border: 2px solid var(--slot-border);
+      border-radius: 6px;
+      background: linear-gradient(180deg, var(--slot-highlight) 0%, var(--slot-bg) 100%);
+      box-shadow: inset 0 1px 0 #ffffff, inset 0 -1px 0 #d0dbe6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 90ms ease;
+    }
+
+    .card:hover {
+      transform: translateY(-1px);
+    }
+
+    .card.selected {
+      border-color: var(--selected);
+      box-shadow: inset 0 1px 0 #fff9d4, 0 0 0 2px rgba(242, 204, 75, 0.35);
+    }
+
+    .icon {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      transition: filter 120ms ease;
+    }
+
+    .card.locked .icon {
+      filter: grayscale(1) brightness(0.92) contrast(0.85);
+    }
+
+    .card.locked::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 4px;
+      background: var(--locked-overlay);
+      pointer-events: none;
+    }
+
+    .details {
+      margin: 0 16px 16px;
+      border: 2px solid #95a7ba;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #edf4fb 0%, #d3dfeb 100%);
+      padding: 12px;
+      min-height: 116px;
+    }
+
+    .details h3 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      color: #506279;
+    }
+
+    .details p {
+      margin: 0;
+      color: #607289;
+      line-height: 1.4;
+      font-size: 16px;
+    }
+
+    .details .score {
+      margin-top: 8px;
+      font-size: 15px;
+      color: #76879a;
+    }
+
+    @media (max-width: 720px) {
+      .title {
+        font-size: 26px;
+      }
+
+      .subtitle {
+        font-size: 20px;
+      }
+
+      .grid {
+        grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+      }
+
+      .icon {
+        width: 46px;
+        height: 46px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="screen">
+    <div class="title">Achievements</div>
+    <div class="subtitle"></div>
+    <div class="meta">Name: {{ name }} | UID: {{ uid }} | Unlocked: {{ unlocked_count }}/{{ total_count }} | Score: {{ current_score }}/{{ total_score }}</div>
+
+    <section class="grid-wrap">
+      <div class="grid">
+        {% for card in cards %}
+          <article
+            class="card {% if not card.is_unlocked %}locked{% endif %} {% if forloop.first %}selected{% endif %}"
+            data-name="{{ card.name|escape }}"
+            data-description="{{ card.description|escape }}"
+            data-score="{{ card.score }}"
+            data-status="{% if card.is_unlocked %}Unlocked{% else %}Locked{% endif %}"
+            title="{{ card.name }}"
+          >
+            <img class="icon" src="{{ card.icon_url }}" alt="{{ card.name }}">
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="details" id="details">
+      {% if cards %}
+        <h3 id="achievement-name">{{ cards.0.name }}</h3>
+        <p id="achievement-description">{{ cards.0.description }}</p>
+        <p class="score" id="achievement-score">{{ cards.0.score }}G | {% if cards.0.is_unlocked %}Unlocked{% else %}Locked{% endif %}</p>
+      {% else %}
+        <h3>No achievement icons found</h3>
+        <p>Add icon files to media/achievements to populate this grid.</p>
+      {% endif %}
+    </section>
+  </main>
+
+  <script>
+    const cards = Array.from(document.querySelectorAll('.card'));
+    const nameEl = document.getElementById('achievement-name');
+    const descriptionEl = document.getElementById('achievement-description');
+    const scoreEl = document.getElementById('achievement-score');
+
+    cards.forEach((card) => {
+      card.addEventListener('click', () => {
+        cards.forEach((c) => c.classList.remove('selected'));
+        card.classList.add('selected');
+
+        if (nameEl) {
+          nameEl.textContent = card.dataset.name;
+        }
+        if (descriptionEl) {
+          descriptionEl.textContent = card.dataset.description;
+        }
+        if (scoreEl) {
+          scoreEl.textContent = `${card.dataset.score}G | ${card.dataset.status}`;
+        }
+      });
+    });
+  </script>
+</body>
+</html>
