@@ -15,7 +15,7 @@ Check it out here: [legacyleaderboards.jakefarrell.ie](https://legacyleaderboard
 
 # Installation Instructions
 
-1. Download Minecraft LCE from my forked repo on branch `achievement-backend`: https://github.com/CheeseLad/MinecraftConsoles/tree/achievement-backend
+1. Download Minecraft LCE from my forked repo: https://github.com/CheeseLad/MinecraftConsoles
 2. Launch the game and click on "Achievements" in the main menu, this will open the website in your browser and prompt you to create an account and link it to your player UID.
 3. Once logged in, you can view your achievements and their unlock status on by clicking on `My Achievements`.
 4. To test it's all working, enter a world and open your inventory, this will unlock the "Open Inventory" achievement. Refresh the achievements page to see it update.
