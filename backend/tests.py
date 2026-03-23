@@ -1,5 +1,6 @@
 from django.test import TestCase
 from django.test import override_settings
+from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
 from .models import Achievement, DifficultyType, KillsStats, Leaderboard, LeaderboardEntry, Player, PlayerAchievement
@@ -280,3 +281,46 @@ class WriteStatsViewTests(TestCase):
 		self.assertEqual(entries[0].rank, 1)
 		self.assertEqual(entries[1].player.uid, "alpha")
 		self.assertEqual(entries[1].rank, 2)
+
+
+class AchievementsUIClearTests(TestCase):
+	def setUp(self):
+		self.client = APIClient()
+
+		self.user = User.objects.create_user(username="owner", password="pw123")
+		self.owner_player = Player.objects.create(user=self.user, uid="owner-uid", name="Owner")
+		self.other_player = Player.objects.create(uid="other-uid", name="Other")
+
+		self.achievement = Achievement.objects.create(
+			id=999,
+			name="Test Achievement",
+			description="Testing clear action",
+			score=10,
+		)
+
+		PlayerAchievement.objects.filter(player=self.owner_player, achievement=self.achievement).update(status=True)
+		PlayerAchievement.objects.filter(player=self.other_player, achievement=self.achievement).update(status=True)
+
+	def test_clear_achievements_only_affects_logged_in_user(self):
+		self.client.force_authenticate(user=self.user)
+
+		response = self.client.post(
+			"/ui/achievements",
+			{"uid": "other-uid"},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		self.assertIn("uid=owner-uid", response.url)
+		self.assertIn("cleared=1", response.url)
+
+		owner_status = PlayerAchievement.objects.get(player=self.owner_player, achievement=self.achievement).status
+		other_status = PlayerAchievement.objects.get(player=self.other_player, achievement=self.achievement).status
+
+		self.assertFalse(owner_status)
+		self.assertTrue(other_status)
+
+	def test_clear_achievements_requires_login(self):
+		response = self.client.post("/ui/achievements", {"uid": "owner-uid"})
+
+		self.assertEqual(response.status_code, 302)
+		self.assertIn("/login/", response.url)

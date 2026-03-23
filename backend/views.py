@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
@@ -286,8 +287,22 @@ class AchievementsUIView(APIView):
             "total_count": len(cards),
             "current_score": current_score,
             "total_score": total_score,
+            "clear_success": request.query_params.get("cleared") == "1",
         }
         return render(request, "backend/achievements_ui.html", context)
+
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return redirect("login")
+
+        player = Player.objects.filter(user=request.user).only("uid").first()
+        if player is None:
+            return redirect("create-account")
+
+        PlayerAchievement.objects.filter(player=player).update(status=False)
+
+        query = urlencode({"uid": player.uid, "cleared": 1})
+        return redirect(f"{reverse('achievements-ui')}?{query}")
 
 DIFFICULTY_MAP = {
     "peaceful": DifficultyType.PEACEFUL,

@@ -99,6 +99,15 @@
       filter: brightness(1.04);
     }
 
+    .nav-btn-danger {
+      border-color: #7f3434;
+      background: linear-gradient(180deg, #c96666 0%, #aa4949 100%);
+    }
+
+    .nav-btn-danger:hover {
+      filter: brightness(1.06);
+    }
+
     .nav-form {
       margin: 0;
     }
@@ -169,6 +178,24 @@
       color: var(--text-sub);
       margin-bottom: 16px;
       padding: 0 12px;
+    }
+
+    .flash-message {
+      margin: 0 16px 12px;
+      border: 2px solid #8ea0b6;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #eef7ec 0%, #d8ead5 100%);
+      color: #456243;
+      padding: 10px 12px;
+      font-size: 15px;
+      font-weight: 600;
+      text-align: center;
+      transition: opacity 240ms ease, transform 240ms ease;
+    }
+
+    .flash-message-hidden {
+      opacity: 0;
+      transform: translateY(-4px);
     }
 
     .grid-wrap {
@@ -293,6 +320,11 @@
         <a class="nav-btn" href="{% url 'home' %}">Home</a>
         <a class="nav-btn" href="{% url 'my-achievements' %}">My Achievements</a>
         {% if request.user.is_authenticated %}
+          <form class="nav-form" method="post" action="{% url 'achievements-ui' %}">
+            {% csrf_token %}
+            <input type="hidden" name="uid" value="{{ uid }}">
+            <button class="nav-btn nav-btn-danger" type="submit" onclick="return confirm('Clear all achievements for your account?');">Clear Achievements</button>
+          </form>
           <form class="nav-form" method="post" action="{% url 'logout' %}">
             {% csrf_token %}
             <button class="nav-btn" type="submit">Logout</button>
@@ -315,6 +347,9 @@
         <div class="title">Achievements</div>
         <div class="subtitle"></div> <!-- | UID: {{ uid }}-->
         <div class="meta">Name: {{ name }} | Unlocked: {{ unlocked_count }}/{{ total_count }} | Score: {{ current_score }}/{{ total_score }}G</div>
+        {% if clear_success %}
+          <div class="flash-message">All achievements were cleared for your account.</div>
+        {% endif %}
 
         <section class="grid-wrap">
           <div class="grid">
@@ -352,6 +387,24 @@
     const nameEl = document.getElementById('achievement-name');
     const descriptionEl = document.getElementById('achievement-description');
     const scoreEl = document.getElementById('achievement-score');
+    const flashMessage = document.querySelector('.flash-message');
+
+    if (flashMessage) {
+      window.setTimeout(() => {
+        flashMessage.classList.add('flash-message-hidden');
+        window.setTimeout(() => flashMessage.remove(), 260);
+      }, 5000);
+
+      if (window.history && window.history.replaceState) {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('cleared') === '1') {
+          url.searchParams.delete('cleared');
+          const search = url.searchParams.toString();
+          const cleanedUrl = `${url.pathname}${search ? `?${search}` : ''}${url.hash}`;
+          window.history.replaceState({}, document.title, cleanedUrl);
+        }
+      }
+    }
 
     cards.forEach((card) => {
       card.addEventListener('click', () => {
