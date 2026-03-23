@@ -27,6 +27,13 @@ from .serializers import (
 )
 
 
+class HomeView(View):
+    template_name = "backend/home.html"
+
+    def get(self, request):
+        return render(request, self.template_name)
+
+
 class CreateAccountView(View):
     template_name = "backend/auth_form.html"
 

@@ -6,6 +6,7 @@ from .views import (
     ApiRootView,
     CreatePlayerView,
     CreateAccountView,
+    HomeView,
     LoginView,
     LogoutView,
     MyAchievementsRedirectView,
@@ -19,7 +20,7 @@ from .views import (
 )
 
 urlpatterns = [
-    path("", LoginView.as_view(), name="home"),
+    path("", HomeView.as_view(), name="home"),
     path("my-achievements/", MyAchievementsRedirectView.as_view(), name="my-achievements"),
     path("create-account/", CreateAccountView.as_view(), name="create-account"),
     path("login/", LoginView.as_view(), name="login"),

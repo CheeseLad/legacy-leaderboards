@@ -1,0 +1,104 @@
+{% extends 'backend/base.html' %}
+
+{% block title %}Legacy Leaderboards{% endblock %}
+
+{% block content %}
+  <div class="title">Legacy Leaderboards</div>
+  <div class="subtitle">Global leaderboard & achievement tracking for Minecraft Legacy Console Edition</div>
+
+  <div class="page-content">
+    <!-- Features Section -->
+    <!--<div class="content-section">
+      <div class="section-title">Features</div>
+      <div class="feature-grid">
+        <div class="feature-item">Player Profiles</div>
+        <div class="feature-item">Achievement Tracking</div>
+        <div class="feature-item">API Access</div>
+        <div class="feature-item">Account Linking</div>
+        <div class="feature-item">Global Leaderboards</div>
+        <div class="feature-item">Achievement UI</div>
+      </div>
+    </div>-->
+
+    <!-- Installation Instructions -->
+    <div class="content-section">
+      <div class="section-title">Installation Instructions</div>
+      
+      <div class="instruction-step">
+        <div class="step-number">Step 1: Download Modified Minecraft</div>
+        <div class="step-text">
+          Download Minecraft LCE from the achievement-backend branch:
+          <br><br>
+          <a href="https://github.com/CheeseLad/MinecraftConsoles/tree/achievement-backend" target="_blank" style="color: #6f8298; text-decoration: underline;">
+            https://github.com/CheeseLad/MinecraftConsoles
+          </a>
+        </div>
+      </div>
+
+      <div class="instruction-step">
+        <div class="step-number">Step 2: Link Your Account</div>
+        <div class="step-text">
+          Launch the game and click on "Achievements" in the main menu. This will open the website in your browser where you'll be prompted to create an account and link it to your player UID.
+        </div>
+      </div>
+
+      <div class="instruction-step">
+        <div class="step-number">Step 3: View Your Achievements</div>
+        <div class="step-text">
+          Once logged in, click on "My Achievements" to view your achievements and their unlock status.
+        </div>
+      </div>
+
+      <div class="instruction-step">
+        <div class="step-number">Step 4: Test It Out</div>
+        <div class="step-text">
+          Enter a world and open your inventory to unlock the "Open Inventory" achievement. Refresh the achievements page to see it update in real-time.
+        </div>
+      </div>
+    </div>
+
+    <!-- Call to Action -->
+    <div class="cta-section">
+      <a href="{% url 'create-account' %}" class="cta-btn">Create Account</a>
+      <a href="{% url 'login' %}" class="cta-btn">Login</a>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Main Routes -->
+    <!--<div class="content-section">
+      <div class="section-title">Main Routes</div>
+      
+      <div class="routes-section">
+        <div class="route-group">
+          <div class="route-group-title">Auth + UI</div>
+          <div class="route-item"><span class="route-method">GET</span> <span class="route-path">/</span> → login page</div>
+          <div class="route-item"><span class="route-method">GET</span> <span class="route-path">/login/</span> → login page</div>
+          <div class="route-item"><span class="route-method">GET</span> <span class="route-path">/create-account/</span> → create account</div>
+          <div class="route-item"><span class="route-method">GET|POST</span> <span class="route-path">/logout/</span> → logout</div>
+          <div class="route-item"><span class="route-method">GET</span> <span class="route-path">/my-achievements/</span> → user achievements</div>
+          <div class="route-item"><span class="route-method">GET</span> <span class="route-path">/ui/achievements?uid=&lt;uid&gt;</span> → player achievements</div>
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="route-group">
+          <div class="route-group-title">API Endpoints</div>
+          <div class="route-item"><span class="route-method">GET</span> <span class="route-path">/api/</span> → API root</div>
+          <div class="route-item"><span class="route-method">GET</span> <span class="route-path">/api/achievement/list</span> → all achievements</div>
+          <div class="route-item"><span class="route-method">POST</span> <span class="route-path">/api/achievement/add</span> → unlock achievement</div>
+          <div class="route-item"><span class="route-method">POST</span> <span class="route-path">/api/achievement/remove</span> → lock achievement</div>
+          <div class="route-item"><span class="route-method">GET</span> <span class="route-path">/api/player?uid=&lt;uid&gt;</span> → player profile</div>
+          <div class="route-item"><span class="route-method">POST</span> <span class="route-path">/api/player/add</span> → create player</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>-->
+
+    <!-- Footer -->
+    <div class="footer-text">
+      <p>Created with ❤ by <a href="https://jakefarrell.ie/" target="_blank">Jake Farrell</a></p>
+    </div>
+  </div>
+{% endblock %}
